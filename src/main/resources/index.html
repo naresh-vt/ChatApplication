@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Group Chat Application</title>
+    <style>
+        /* Base styles for clean layout */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        /* Main container layouts */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        #loginContainer {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #chatContainer {
+            display: none;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Grid layout for chat interface */
+        .chat-grid {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            height: calc(100vh - 100px);
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            border-right: 1px solid #eee;
+            padding-right: 20px;
+            overflow-y: auto;
+        }
+
+        /* Common form elements styling */
+        input, select, button {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        /* Chat area styling */
+        .chat-main {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #messageArea {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: none;
+            font-family: monospace;
+            margin: 10px 0;
+            background-color: #fff;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        #messageInput {
+            flex-grow: 1;
+        }
+
+        /* Lists styling */
+        .section-list {
+            margin-bottom: 20px;
+        }
+
+        .section-list h3 {
+            margin: 15px 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .list-item {
+            padding: 8px 12px;
+            margin: 4px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .list-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .list-item.active {
+            background-color: #e0e0e0;
+        }
+
+        /* Group creation modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .selected-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .selected-user-tag {
+            background-color: #e0e0e0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .remove-user {
+            cursor: pointer;
+            color: #666;
+        }
+
+        /* Chat message types */
+        .message-private {
+            color: #2196F3;
+        }
+
+        .message-group {
+            color: #4CAF50;
+        }
+
+        .message-system {
+            color: #9E9E9E;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<!-- Login Screen -->
+<div id="loginContainer">
+    <h2 style="margin-bottom: 20px;">Join Chat</h2>
+    <div>
+        <input type="text" id="usernameInput" placeholder="Enter your username" style="width: calc(100% - 100px);" />
+        <button onclick="login()">Join</button>
+    </div>
+</div>
+
+<!-- Main Chat Interface -->
+<div id="chatContainer" class="container">
+    <div class="chat-grid">
+        <!-- Sidebar with users and groups -->
+        <div class="sidebar">
+            <button onclick="showCreateGroupModal()" style="width: 100%;">Create New Group</button>
+
+            <div class="section-list">
+                <h3>Direct Messages</h3>
+                <div id="userList"></div>
+            </div>
+
+            <div class="section-list">
+                <h3>Groups</h3>
+                <div id="groupList"></div>
+            </div>
+        </div>
+
+        <!-- Main chat area -->
+        <div class="chat-main">
+            <h2 id="chatHeader">Select a conversation</h2>
+            <textarea id="messageArea" readonly></textarea>
+            <div class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your message..." />
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Group Creation Modal -->
+<div id="createGroupModal" class="modal">
+    <div class="modal-content">
+        <h2>Create New Group</h2>
+        <div style="margin: 20px 0;">
+            <input type="text" id="groupNameInput" placeholder="Enter group name" style="width: 100%;" />
+        </div>
+        <div>
+            <h3>Select Members:</h3>
+            <div id="userSelection"></div>
+            <div id="selectedUsers" class="selected-users"></div>
+        </div>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="closeModal()" style="background-color: #666;">Cancel</button>
+            <button onclick="createGroup()">Create Group</button>
+        </div>
+    </div>
+</div>
+
+<script>
+        let ws = new WebSocket("ws://localhost:8080/chat");
+        let currentRecipient = null;
+        let selectedUsers = new Set();
+        let currentUser = '';
+
+        // WebSocket event handlers
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            switch(data.type) {
+                case "userList":
+                    updateUserList(data.content);
+                    updateUserSelection(data.content);
+                    break;
+                case "groupList":
+                    updateGroupList(data.content);
+                    break;
+                case "private":
+                case "group":
+                    appendMessage(data);
+                    break;
+            }
+        };
+
+        // Login function
+        function login() {
+            const username = document.getElementById("usernameInput").value.trim();
+            if (username) {
+                currentUser = username;
+                ws.send(JSON.stringify({
+                    type: "login",
+                    content: username,
+                    recipient: "all"
+                }));
+                document.getElementById("loginContainer").style.display = "none";
+                document.getElementById("chatContainer").style.display = "block";
+            }
+        }
+
+        // Message handling functions
+        function appendMessage(data) {
+            const messageArea = document.getElementById("messageArea");
+            let messageText = '';
+
+            if (data.type === "private") {
+                messageText = `[Private] ${data.sender} → ${data.recipient}: ${data.content}`;
+            } else if (data.type === "group") {
+                messageText = `[${data.recipient}] ${data.sender}: ${data.content}`;
+            }
+
+            messageArea.value += messageText + "\n";
+            messageArea.scrollTop = messageArea.scrollHeight;
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const content = messageInput.value.trim();
+
+            if (content && currentRecipient) {
+                ws.send(JSON.stringify({
+                    type: "message",
+                    content: content,
+                    recipient: currentRecipient
+                }));
+                messageInput.value = "";
+            }
+        }
+
+        // User and group list updates
+        function updateUserList(users) {
+            const userListDiv = document.getElementById("userList");
+            userListDiv.innerHTML = users.split(',')
+                .filter(user => user !== currentUser)
+                .map(user => `
+                    <div class="list-item ${currentRecipient === user ? 'active' : ''}"
+                         onclick="selectRecipient('${user}')">
+                        ${user}
+                    </div>
+                `).join('');
+        }
+
+        function updateGroupList(groups) {
+            if (!groups) return;
+            const groupListDiv = document.getElementById("groupList");
+            groupListDiv.innerHTML = groups.split(',').map(group => `
+                <div class="list-item ${currentRecipient === 'group:' + group ? 'active' : ''}"
+                     onclick="selectRecipient('group:${group}')">
+                    ${group}
+                </div>
+            `).join('');
+        }
+
+        // Recipient selection
+        function selectRecipient(recipient) {
+            currentRecipient = recipient;
+            document.querySelectorAll('.list-item').forEach(item => item.classList.remove('active'));
+            const selectedItem = document.querySelector(`[onclick="selectRecipient('${recipient}')"]`);
+            if (selectedItem) selectedItem.classList.add('active');
+
+            // Update chat header
+            const chatHeader = document.getElementById("chatHeader");
+            chatHeader.textContent = recipient.startsWith('group:') ?
+                `Group: ${recipient.substring(6)}` :
+                `Chat with ${recipient}`;
+        }
+
+        // Group creation functions
+        function showCreateGroupModal() {
+            document.getElementById("createGroupModal").style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById("createGroupModal").style.display = "none";
+            document.getElementById("groupNameInput").value = "";
+            selectedUsers.clear();
+            updateSelectedUsersList();
+        }
+
+        function updateUserSelection(users) {
+            const userSelectionDiv = document.getElementById("userSelection");
+            // Create a list of all users except the current user
+            userSelectionDiv.innerHTML = users.split(',')
+                .filter(user => user !== currentUser)
+                .map(user => `
+                    <div class="list-item user-selection-item ${selectedUsers.has(user) ? 'selected' : ''}"
+                         onclick="toggleUserSelection('${user}')">
+                        <span class="user-name">${user}</span>
+                        <span class="selection-indicator">${selectedUsers.has(user) ? '✓' : ''}</span>
+                    </div>
+                `).join('');
+        }
+
+        function toggleUserSelection(user) {
+            if (selectedUsers.has(user)) {
+                selectedUsers.delete(user);
+            } else {
+                selectedUsers.add(user);
+            }
+            // Update both the selection list and the visual feedback
+            updateSelectedUsersList();
+            updateUserSelection(document.getElementById("userList").innerText);
+        }
+
+        function updateSelectedUsersList() {
+            const selectedUsersDiv = document.getElementById("selectedUsers");
+            selectedUsersDiv.innerHTML = Array.from(selectedUsers).map(user => `
+                <div class="selected-user-tag">
+                    ${user}
+                    <span class="remove-user" onclick="event.stopPropagation(); toggleUserSelection('${user}')">&times;</span>
+                </div>
+            `).join('');
+
+            // Update the create button state
+            const createButton = document.querySelector('#createGroupBtn');
+            if (createButton) {
+                createButton.disabled = selectedUsers.size === 0;
+            }
+        }
+
+        function createGroup() {
+            const groupName = document.getElementById("groupNameInput").value.trim();
+            if (groupName && selectedUsers.size > 0) {
+                // Include current user and selected users in the group
+                const members = [currentUser, ...Array.from(selectedUsers)];
+
+                // Send group creation message with all required data
+                const groupData = {
+                    type: "createGroup",
+                    content: groupName,
+                    recipient: "server",
+                    groupMembers: members
+                };
+                console.log("Creating group with data:", groupData);
+                ws.send(JSON.stringify(groupData));
+                closeModal();
+            } else {
+                alert("Please enter a group name and select at least one user");
+            }
+        }
+
+        // Enter key handlers
+        document.getElementById("messageInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        document.getElementById("usernameInput").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                login();
+            }
+        });
+    </script>
+</body>
+</html>
