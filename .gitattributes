@@ -1,0 +1,4 @@
+echo "# Language detection configuration" > .gitattributes
+echo "*.html linguist-detectable=true" >> .gitattributes
+echo "*.htm linguist-detectable=true" >> .gitattributes
+echo "*.java linguist-detectable=true" >> .gitattributes
